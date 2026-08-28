@@ -1,0 +1,595 @@
+<Window x:Class="XXTouchController.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:XXTouchController.Models"
+        xmlns:vm="clr-namespace:XXTouchController.ViewModels"
+        Title="XXTouch Controller" Height="840" Width="1440"
+        MinHeight="560" MinWidth="900"
+        WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded" Closing="Window_Closing">
+    <Window.Resources>
+        <vm:BooleanAndConverter x:Key="AndConverter"/>
+        <vm:OneBasedConverter x:Key="OneBasedConverter"/>
+        <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="7,4"/>
+            <Setter Property="Margin" Value="2"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="StatusText" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="GridText" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+        </Style>
+        <Style x:Key="GridTextCenter" TargetType="TextBlock" BasedOn="{StaticResource GridText}">
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="GridCell" TargetType="DataGridCell">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4,0"/>
+        </Style>
+        <Style x:Key="GridHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="4,0"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" MinHeight="34"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="320" MinWidth="260" MaxWidth="385"/>
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer x:Name="MainContentScrollViewer" Grid.Column="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          CanContentScroll="False" Focusable="False">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="260" MinHeight="120"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="140" MinHeight="90"/>
+                </Grid.RowDefinitions>
+
+                <GroupBox Grid.Row="0" Header="Kết nối">
+                    <WrapPanel VerticalAlignment="Center">
+                        <TextBlock Text="IP / tên máy:" Margin="4,0,7,0" VerticalAlignment="Center"/>
+                        <TextBox x:Name="IpTextBox" Width="185" Text="10.0.0.223"/>
+                        <TextBlock Text="Cổng:" Margin="15,0,7,0" VerticalAlignment="Center"/>
+                        <TextBox x:Name="PortTextBox" Width="70" Text="46952"/>
+                        <Button Content="＋ Thêm thiết bị" Click="AddDevice_Click" Margin="16,3,3,3"/>
+                        <Button Content="✎ Sửa thiết bị" Click="EditDevice_Click"/>
+                        <Button Content="✕ Xóa đã chọn" Click="DeleteDevice_Click"
+                                ToolTip="Xóa tất cả thiết bị đã đánh dấu; nếu chưa đánh dấu thì xóa dòng đang bôi."/>
+                        <Button Content="⟳ Kiểm tra kết nối" Click="CheckConnection_Click" Margin="16,3,3,3"/>
+                        <Button Content="⌁ Tự quét thiết bị" Click="StartScan_Click" Margin="16,3,3,3"
+                                IsEnabled="{Binding CanStartScan}"/>
+                        <Button Content="■ Dừng quét" Click="StopScan_Click"
+                                IsEnabled="{Binding CanStopScan}"/>
+                        <CheckBox x:Name="AutoScanCheckBox" Content="Tự động quét"
+                                  Margin="15,0,5,0" VerticalAlignment="Center"
+                                  Click="SettingsChanged_Click"/>
+                        <TextBlock Text="Chu kỳ (giây):" Margin="10,0,5,0" VerticalAlignment="Center"/>
+                        <TextBox x:Name="ScanIntervalTextBox" Width="48" Text="10"
+                                 LostFocus="SettingsChanged_Click"/>
+                        <TextBlock Text="{Binding ScanStatus}" Foreground="#4D647C"
+                                   Margin="18,0,4,0" VerticalAlignment="Center"/>
+                    </WrapPanel>
+                </GroupBox>
+
+                <GroupBox Grid.Row="1" Header="Danh sách thiết bị">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" Margin="2,0,2,6">
+                            <Button Content="Xóa tìm" DockPanel.Dock="Right"
+                                    Click="ClearDeviceSearch_Click" Margin="6,0,0,0"/>
+                            <TextBlock x:Name="DeviceSearchResultText" DockPanel.Dock="Right"
+                                       Foreground="#607080" VerticalAlignment="Center"
+                                       Margin="10,0,4,0"/>
+                            <TextBlock Text="Tìm ID / STT / IP / tên / username:"
+                                       VerticalAlignment="Center" Margin="2,0,8,0"/>
+                            <TextBox x:Name="DeviceSearchTextBox" Width="320"
+                                     TextChanged="DeviceSearchTextBox_TextChanged"
+                                     ToolTip="Có thể nhập toàn bộ hoặc một phần ID, STT, IP, tên thiết bị hay TikTok username."/>
+                        </DockPanel>
+                    <DataGrid Grid.Row="1" x:Name="DeviceGrid" ItemsSource="{Binding Devices}"
+                              SelectedItem="{Binding SelectedDevice}"
+                              SelectionChanged="DeviceGrid_SelectionChanged"
+                              AutoGenerateColumns="False" CanUserAddRows="False"
+                              IsReadOnly="True" HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal" RowHeaderWidth="0"
+                              FontWeight="Normal" AlternatingRowBackground="#F7FAFD"
+                              CellStyle="{StaticResource GridCell}"
+                              ColumnHeaderStyle="{StaticResource GridHeader}"
+                              EnableRowVirtualization="True"
+                              EnableColumnVirtualization="True"
+                              VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
+                              HorizontalScrollBarVisibility="Auto">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="STT" Width="44"
+                                ElementStyle="{StaticResource GridTextCenter}"
+                                Binding="{Binding DisplayIndex}"/>
+                            <DataGridTemplateColumn Header="Chọn" Width="52">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  Click="DeviceSelection_Changed"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Tên thiết bị" Binding="{Binding Name}" Width="125"
+                                ElementStyle="{StaticResource GridText}"/>
+                            <DataGridTextColumn Header="ID thiết bị" Binding="{Binding DeviceIdShortDisplay}" Width="130">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource GridText}">
+                                        <Setter Property="ToolTip" Value="{Binding DeviceId}"/>
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Địa chỉ IP" Binding="{Binding Ip}" Width="110"
+                                ElementStyle="{StaticResource GridText}"/>
+                            <DataGridTextColumn Header="Cổng" Binding="{Binding Port}" Width="65"
+                                ElementStyle="{StaticResource GridTextCenter}"/>
+                            <DataGridTextColumn Header="TikTok username"
+                                Binding="{Binding TikTokUsernameDisplay}" Width="145"
+                                ElementStyle="{StaticResource GridText}"/>
+                            <DataGridTextColumn Header="Kết quả lấy username"
+                                Binding="{Binding TikTokUsernameStatusDisplay}" Width="195"
+                                ElementStyle="{StaticResource GridText}"/>
+                            <DataGridTextColumn Header="TikTok Point"
+                                Binding="{Binding TikTokPointBalanceDisplay}" Width="105"
+                                ElementStyle="{StaticResource GridTextCenter}"/>
+                            <DataGridTextColumn Header="Mức dự kiến"
+                                Binding="{Binding TikTokPointPlanDisplay}" Width="105"
+                                ElementStyle="{StaticResource GridTextCenter}"/>
+                            <DataGridTextColumn Header="Kết quả Point"
+                                Binding="{Binding TikTokPointStatusDisplay}" Width="175"
+                                ElementStyle="{StaticResource GridText}"/>
+                            <DataGridTextColumn Header="Link Point"
+                                Binding="{Binding TikTokPointLinkDisplay}" Width="180">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource GridText}">
+                                        <Setter Property="ToolTip" Value="{Binding TikTokPointLink}"/>
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTemplateColumn Header="Trạng thái kết nối" Width="130">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding ConnectionText}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource StatusText}">
+                                                    <Setter Property="Foreground" Value="#607080"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ConnectionState}" Value="{x:Static models:ConnectionState.Online}">
+                                                            <Setter Property="Foreground" Value="#109B32"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ConnectionState}" Value="{x:Static models:ConnectionState.Offline}">
+                                                            <Setter Property="Foreground" Value="#D52B2B"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ConnectionState}" Value="{x:Static models:ConnectionState.Checking}">
+                                                            <Setter Property="Foreground" Value="#147AD6"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Sẵn sàng Home" Width="125">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding HomeReadyText}"
+                                                   ToolTip="{Binding HomeReadyDetail}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource StatusText}">
+                                                    <Setter Property="Foreground" Value="#E27B00"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding HomeReady}" Value="True">
+                                                            <Setter Property="Foreground" Value="#109B32"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ScreenOn}" Value="False">
+                                                            <Setter Property="Foreground" Value="#7A8088"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Trạng thái script" Width="230">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding ScriptDisplayText}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource StatusText}">
+                                                    <Setter Property="Foreground" Value="#7A8088"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ScriptState}" Value="{x:Static models:ScriptState.Running}">
+                                                            <Setter Property="Foreground" Value="#F08A12"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ScriptState}" Value="{x:Static models:ScriptState.Queued}">
+                                                            <Setter Property="Foreground" Value="#6B62D9"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ScriptState}" Value="{x:Static models:ScriptState.Sending}">
+                                                            <Setter Property="Foreground" Value="#147AD6"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ScriptState}" Value="{x:Static models:ScriptState.Completed}">
+                                                            <Setter Property="Foreground" Value="#109B32"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ScriptState}" Value="{x:Static models:ScriptState.Error}">
+                                                            <Setter Property="Foreground" Value="#D52B2B"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Cập nhật cuối" Binding="{Binding LastUpdatedText}" Width="92"
+                                ElementStyle="{StaticResource GridTextCenter}"/>
+                            <DataGridTemplateColumn Header="Thao tác" Width="310">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="▣ Xem màn hình" Tag="{Binding}" Click="ViewScreen_Click"
+                                                    IsEnabled="{Binding CanView}" Style="{StaticResource CompactButton}"/>
+                                            <Button Content="▶ Start" Tag="{Binding}" Click="StartDevice_Click"
+                                                    Style="{StaticResource CompactButton}">
+                                                <Button.IsEnabled>
+                                                    <MultiBinding Converter="{StaticResource AndConverter}">
+                                                        <Binding Path="CanStart"/>
+                                                        <Binding Path="DataContext.HasLua" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                    </MultiBinding>
+                                                </Button.IsEnabled>
+                                            </Button>
+                                            <Button Content="■ Stop" Tag="{Binding}" Click="StopDevice_Click"
+                                                    IsEnabled="{Binding CanStop}" Style="{StaticResource CompactButton}"/>
+                                            <Button Content="⟳ Kiểm tra" Tag="{Binding}" Click="CheckDevice_Click"
+                                                    Style="{StaticResource CompactButton}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    </Grid>
+                </GroupBox>
+
+                <GroupBox Grid.Row="2" Header="Thao tác hàng loạt">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <WrapPanel Grid.Row="0">
+                            <Button Content="⬆ Cập nhật Agent..." Click="UpdateAgent_Click"
+                                    ToolTip="Phát TIPA qua LAN, mở TrollStore và tự bấm Install trên các thiết bị đã chọn."/>
+                            <Button Content="▶ Start thiết bị đã chọn" Click="StartSelected_Click"/>
+                            <Button Content="■ Stop thiết bị đã chọn" Click="StopSelected_Click"/>
+                            <Button Content="⟳ Kiểm tra thiết bị đã chọn" Click="CheckSelected_Click"/>
+                            <Button Content="Chọn tất cả" Click="SelectAll_Click" Margin="15,3,3,3"/>
+                            <Button Content="Bỏ chọn" Click="ClearSelection_Click"/>
+                            <TextBlock Text="{Binding BatchStatus}" Foreground="#4D647C"
+                                       Margin="14,0,14,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Đồng thời:" VerticalAlignment="Center"/>
+                            <TextBox x:Name="ConcurrencyTextBox" Width="46" Text="5" Margin="7,0,0,0"
+                                     LostFocus="SettingsChanged_Click"/>
+                            <TextBlock Text="Delay mỗi lượt (giây):"
+                                       Margin="14,0,0,0" VerticalAlignment="Center"/>
+                            <TextBox x:Name="BatchDelayTextBox" Width="46" Text="0" Margin="7,0,0,0"
+                                     ToolTip="Mỗi vị trí chạy sẽ chờ khoảng thời gian này trước khi nhận thiết bị tiếp theo."
+                                     LostFocus="SettingsChanged_Click"/>
+                            <TextBlock Text="Lặp Lua:" Margin="14,0,0,0" VerticalAlignment="Center"/>
+                            <TextBox x:Name="LuaRepeatTextBox" Width="46" Text="1" Margin="7,0,0,0"
+                                     ToolTip="Số lần chạy lại Lua trên mỗi thiết bị đã chọn."
+                                     LostFocus="SettingsChanged_Click"/>
+                        </WrapPanel>
+                        <WrapPanel Grid.Row="1" Margin="2,5,0,0">
+                            <CheckBox x:Name="OnlyHomeReadyCheckBox"
+                                      Content="Chỉ chạy máy sáng ở Home"
+                                      VerticalAlignment="Center"
+                                      Click="SettingsChanged_Click"
+                                      ToolTip="Trước khi Start, Controller kiểm tra hai lần và chỉ xếp hàng thiết bị có home_ready=true."/>
+                            <Button x:Name="FilterHomeReadyButton"
+                                    Content="Lọc máy sẵn sàng"
+                                    Click="FilterHomeReady_Click"
+                                    Margin="14,2,3,2"
+                                    ToolTip="Kiểm tra toàn bộ danh sách và chỉ đánh dấu các máy màn hình sáng, đã mở khóa, đang ở Home."/>
+                            <TextBlock Text="Máy bị bỏ qua không được đưa vào hàng đợi và không tính số vòng."
+                                       Foreground="#607080" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                        </WrapPanel>
+                    </Grid>
+                </GroupBox>
+
+                <GroupBox Grid.Row="3" Header="Lấy TikTok username">
+                    <WrapPanel>
+                            <Button x:Name="CollectTikTokUsernamesButton"
+                                    Content="＠ Lấy username thiết bị đã chọn"
+                                    Click="CollectTikTokUsernames_Click"
+                                    ToolTip="Chỉ chạy trên thiết bị đã chọn; tự bỏ qua màn hình tắt, máy Offline hoặc Agent đang bận."/>
+                            <Button Content="Xuất username CSV..."
+                                    Click="ExportTikTokUsernames_Click"/>
+                            <Button Content="Mở thư mục kết quả"
+                                    Click="OpenTikTokUsernameFolder_Click"/>
+                        <TextBlock Text="{Binding UsernameBatchStatus}"
+                                   Foreground="#4D647C"
+                                   VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    </WrapPanel>
+                </GroupBox>
+
+                <GroupBox Grid.Row="4" Header="TikTok Point (chỉ thu kết quả, không xác nhận rút)">
+                    <WrapPanel>
+                            <Button x:Name="RefreshTikTokPointResultsButton"
+                                    Content="Nạp kết quả Point thiết bị đã chọn"
+                                    Click="RefreshTikTokPointResults_Click"
+                                    ToolTip="Đọc sự kiện Point do LuaAgent 3.1 báo về; không đọc clipboard trực tiếp qua LAN."/>
+                            <Button Content="Xuất Point CSV..."
+                                    Click="ExportTikTokPointResults_Click"/>
+                            <Button Content="Mở thư mục kết quả Point"
+                                    Click="OpenTikTokPointFolder_Click"/>
+                        <TextBlock Text="{Binding PointResultStatus}"
+                                   Foreground="#4D647C"
+                                   VerticalAlignment="Center" Margin="12,0,4,0"/>
+                    </WrapPanel>
+                </GroupBox>
+
+                <GroupBox Grid.Row="5" Header="File script Lua">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel>
+                            <TextBlock Text="File:" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <Button Content="📁 Chọn file" DockPanel.Dock="Right" Click="ChooseLua_Click"/>
+                            <Button Content="Mở thư mục" DockPanel.Dock="Right" Click="OpenLuaFolder_Click"/>
+                            <TextBox Text="{Binding LuaFile}" IsReadOnly="True" Margin="0,0,6,0"/>
+                        </DockPanel>
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,9,0,0">
+                            <TextBlock Text="Tên file:"/>
+                            <TextBlock Text="{Binding LuaFileName}" FontWeight="SemiBold" Margin="5,0,20,0"/>
+                            <TextBlock Text="Kích thước:"/>
+                            <TextBlock Text="{Binding LuaSize}" Margin="5,0,20,0"/>
+                            <TextBlock Text="Cập nhật:"/>
+                            <TextBlock Text="{Binding LuaUpdated}" Margin="5,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </GroupBox>
+
+                <GroupBox Grid.Row="6" Header="Log">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" LastChildFill="False">
+                            <CheckBox x:Name="DiagnosticsCheckBox" Content="Chế độ diagnostics"
+                                      VerticalAlignment="Center" Click="SettingsChanged_Click"/>
+                            <Button Content="Xóa log" DockPanel.Dock="Right" Click="ClearLog_Click"/>
+                        </DockPanel>
+                        <ListBox x:Name="LogList" Grid.Row="1" ItemsSource="{Binding Logs}"
+                                 BorderBrush="#D8DEE8" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas" FontSize="12">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Display}" TextWrapping="NoWrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#1778C8"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Level}" Value="{x:Static models:LogLevel.Success}">
+                                                        <Setter Property="Foreground" Value="#138A31"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Level}" Value="{x:Static models:LogLevel.Warning}">
+                                                        <Setter Property="Foreground" Value="#E27B00"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Level}" Value="{x:Static models:LogLevel.Error}">
+                                                        <Setter Property="Foreground" Value="#D52B2B"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </GroupBox>
+            </Grid>
+            </ScrollViewer>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch" Background="#D8DEE8"
+                          ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                          ShowsPreview="True" ToolTip="Kéo để thay đổi độ rộng vùng xem màn hình."/>
+
+            <TabControl Grid.Column="2" Margin="4,5,7,5">
+                <TabItem Header="Màn hình">
+            <GroupBox Header="Xem màn hình" Margin="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Grid.Row="0" BorderBrush="#55A0E8" BorderThickness="1"
+                            Background="#EFF7FF" Padding="10" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Thiết bị đang xem:" Foreground="#315B82"/>
+                            <TextBlock Text="{Binding ViewedDeviceName}" FontWeight="Bold"
+                                       FontSize="15" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Grid.Row="1" Background="#111" BorderBrush="#B8C1CE"
+                            BorderThickness="1" CornerRadius="3">
+                        <Grid>
+                            <TextBlock Text="Chọn “Xem màn hình” ở một thiết bị"
+                                       Foreground="#AAB4BF" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" TextWrapping="Wrap"/>
+                            <Image x:Name="SnapshotImage" Stretch="Uniform"/>
+                            <ProgressBar x:Name="SnapshotProgress" IsIndeterminate="True"
+                                         Height="3" VerticalAlignment="Top" Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+                    <StackPanel Grid.Row="2" Margin="0,10,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Content="⟳ Làm mới ảnh" Click="RefreshSnapshot_Click"/>
+                            <CheckBox x:Name="AutoSnapshotCheckBox" Content="Tự động cập nhật"
+                                      Margin="10,0,0,0" VerticalAlignment="Center"
+                                      Click="SettingsChanged_Click"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,7,0,0">
+                            <TextBlock Text="Chu kỳ (giây):" VerticalAlignment="Center"/>
+                            <TextBox x:Name="SnapshotIntervalTextBox" Width="48" Text="2"
+                                     Margin="7,0,0,0" LostFocus="SettingsChanged_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Chỉ hiển thị ảnh; không điều khiển bằng chuột."
+                                   Foreground="#758190" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </GroupBox>
+                </TabItem>
+                <TabItem Header="Phân tích lỗi AI">
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="170"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" BorderBrush="#55A0E8" BorderThickness="1"
+                                Background="#EFF7FF" Padding="9" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="AI chỉ phân tích và đề xuất sửa lỗi."
+                                           FontWeight="Bold" Foreground="#174F88"/>
+                                <TextBlock Text="Không có quyền Start/Stop hoặc điều khiển thiết bị."
+                                           Foreground="#526B80" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Grid Grid.Row="1" Margin="0,0,0,7">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="API key:" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                            <PasswordBox x:Name="AiApiKeyBox" Grid.Column="1"
+                                         PasswordChar="●" ToolTip="Khóa được lưu trong Windows Credential Manager."/>
+                        </Grid>
+
+                        <StackPanel Grid.Row="2">
+                            <DockPanel>
+                                <TextBlock Text="Model:" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                <TextBox x:Name="AiModelTextBox" Text="gpt-5.6-terra"
+                                         LostFocus="AiSettingsChanged_Click"/>
+                            </DockPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,5,0,3">
+                                <Button Content="Lưu API key" Click="SaveAiKey_Click"/>
+                                <Button Content="Xóa API key" Click="DeleteAiKey_Click"/>
+                            </StackPanel>
+                            <CheckBox x:Name="AiIncludeSnapshotCheckBox"
+                                      Content="Gửi ảnh màn hình đang xem"
+                                      Click="AiSettingsChanged_Click" Margin="3"/>
+                            <CheckBox x:Name="AiRedactNetworkCheckBox"
+                                      Content="Che IP và địa chỉ mạng trước khi gửi"
+                                      IsChecked="True" Click="AiSettingsChanged_Click" Margin="3"/>
+                            <TextBlock Text="Gửi tối đa 150 log gần nhất và file Lua đang chọn."
+                                       Foreground="#758190" TextWrapping="Wrap" Margin="3,3,3,6"/>
+                        </StackPanel>
+
+                        <Grid Grid.Row="3">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <DockPanel LastChildFill="False">
+                                <TextBlock Text="Kết quả chẩn đoán" FontWeight="Bold"
+                                           DockPanel.Dock="Left"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock x:Name="AiStatusText" Text="Chưa phân tích"
+                                           DockPanel.Dock="Right" Foreground="#607080"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <TextBox x:Name="AiReportTextBox" Grid.Row="1" Margin="0,5,0,5"
+                                     IsReadOnly="True" AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     TextWrapping="Wrap" FontFamily="Segoe UI"/>
+                        </Grid>
+
+                        <StackPanel Grid.Row="4" Orientation="Horizontal">
+                            <Button x:Name="AnalyzeErrorButton" Content="Phân tích lỗi"
+                                    Click="AnalyzeError_Click"/>
+                            <Button x:Name="CancelAnalysisButton" Content="Hủy"
+                                    Click="CancelAnalysis_Click" IsEnabled="False"/>
+                            <Button Content="Sao chép báo cáo" Click="CopyAiReport_Click"/>
+                        </StackPanel>
+
+                        <Grid Grid.Row="5" Margin="0,5,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Lua đã sửa đề xuất" FontWeight="Bold"/>
+                            <TextBox x:Name="AiFixedLuaTextBox" Grid.Row="1" Margin="0,5,0,0"
+                                     IsReadOnly="True" AcceptsReturn="True"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     TextWrapping="NoWrap" FontFamily="Consolas" FontSize="12"/>
+                        </Grid>
+
+                        <StackPanel Grid.Row="6" Orientation="Horizontal" Margin="0,5,0,0">
+                            <Button x:Name="SaveFixedLuaButton" Content="Lưu bản sửa thành file mới..."
+                                    Click="SaveFixedLua_Click" IsEnabled="False"/>
+                            <TextBlock Text="Không tự ghi đè hoặc tự chạy."
+                                       Foreground="#758190" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </TabItem>
+            </TabControl>
+        </Grid>
+
+        <Border Grid.Row="1" Background="White" BorderBrush="#D8DEE8" BorderThickness="0,1,0,0">
+            <WrapPanel Margin="12,5" VerticalAlignment="Center">
+                    <TextBlock Text="Tổng thiết bị: "/><TextBlock Text="{Binding TotalCount}" FontWeight="Bold"/>
+                    <TextBlock Text="   Online: " Foreground="#138A31"/><TextBlock Text="{Binding OnlineCount}" Foreground="#138A31" FontWeight="Bold"/>
+                    <TextBlock Text="   Offline: " Foreground="#D52B2B"/><TextBlock Text="{Binding OfflineCount}" Foreground="#D52B2B" FontWeight="Bold"/>
+                    <TextBlock Text="   Đang chạy: " Foreground="#E27B00"/><TextBlock Text="{Binding RunningCount}" Foreground="#E27B00" FontWeight="Bold"/>
+                    <TextBlock Text="   Chờ: " Foreground="#6B62D9"/><TextBlock Text="{Binding QueuedCount}" Foreground="#6B62D9" FontWeight="Bold"/>
+                    <TextBlock Text="   Đã dừng: "/><TextBlock Text="{Binding StoppedCount}" FontWeight="Bold"/>
+                    <TextBlock Text="   |   Quét: "/><TextBlock Text="{Binding ScanStatus}"/>
+                <TextBlock x:Name="VersionText" DockPanel.Dock="Right"
+                           VerticalAlignment="Center" Foreground="#657384" Margin="12,0,0,0"/>
+            </WrapPanel>
+        </Border>
+    </Grid>
+</Window>

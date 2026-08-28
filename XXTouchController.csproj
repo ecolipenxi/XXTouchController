@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>XXTouchController</AssemblyName>
+    <RootNamespace>XXTouchController</RootNamespace>
+    <Version>3.8.26</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runtime creates config files when they do not exist. Do not package
+         defaults because extracting an update over an existing installation
+         must never overwrite the user's 100+ device list. -->
+    <Content Include="README-VI.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <EmbeddedResource Include="TikTokUsername\**\*"/>
+  </ItemGroup>
+</Project>

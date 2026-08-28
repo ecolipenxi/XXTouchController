@@ -1,0 +1,23 @@
+# Visual Studio / .NET build output
+bin/
+obj/
+.vs/
+publish/
+release-*/
+
+# Local runtime data and device inventory
+config/
+Ket-qua-username/
+Ket-qua-point/
+diagnostics*/
+
+# Local verification artifacts and handoff backups
+test-artifacts/
+handoff/
+
+# Per-user IDE files
+*.user
+*.suo
+*.tmp
+*.log
+

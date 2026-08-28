@@ -1,0 +1,34 @@
+﻿<Application x:Class="XXTouchController.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:XXTouchController"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <SolidColorBrush x:Key="AccentBrush" Color="#0B74DE"/>
+        <SolidColorBrush x:Key="PanelBorderBrush" Color="#D8DEE8"/>
+        <Style TargetType="Window">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Background" Value="#F7F9FC"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="11,6"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#B9C4D3"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Padding" Value="7,5"/>
+            <Setter Property="BorderBrush" Value="#B9C4D3"/>
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="7,5"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="BorderBrush" Value="{StaticResource PanelBorderBrush}"/>
+            <Setter Property="Foreground" Value="#174F88"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Application.Resources>
+</Application>
